@@ -22,12 +22,12 @@ export default function handler(
   const completeFolderName = folderName.join('/');
 
   try {
-    const directoryPath = path.join(process.cwd(), 'public', 'yupoo_downloads', completeFolderName);
+    const directoryPath = path.join(process.cwd(), 'public', 'yupoo_downloads_webps', completeFolderName);
     const files = fs.readdirSync(directoryPath);
 
     const imageUrls = files
       .filter(file => /\.(jpg|jpeg|png|gif|webp)$/i.test(file))
-      .map(file => `/yupoo_downloads/${encodeURIComponent(completeFolderName)}/${encodeURIComponent(file)}`);
+      .map(file => `/yupoo_downloads_webps/${encodeURIComponent(completeFolderName)}/${encodeURIComponent(file)}`);
 
     res.status(200).json({ success: true, data: imageUrls });
   } catch (error) {

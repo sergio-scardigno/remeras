@@ -11,7 +11,7 @@ export default async function handler(
   await dbConnect();
 
   try {
-    const yupooPath = path.join(process.cwd(), 'public', 'yupoo_downloads');
+    const yupooPath = path.join(process.cwd(), 'public', 'yupoo_downloads_webps');
     const directories = fs.readdirSync(yupooPath, { withFileTypes: true })
       .filter(dirent => dirent.isDirectory())
       .map(dirent => dirent.name);
@@ -31,7 +31,7 @@ export default async function handler(
           const files = fs.readdirSync(path.join(yupooPath, dirName));
           const imageFile = files.find(file => /\.(jpg|jpeg|png|gif|webp)$/i.test(file));
           if (imageFile) {
-            imageUrl = `/yupoo_downloads/${dirName}/${imageFile}`;
+            imageUrl = `/yupoo_downloads_webps/${dirName}/${imageFile}`;
           }
         } catch {
           // El directorio podría estar vacío o inaccesible, continuamos
