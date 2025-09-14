@@ -37,8 +37,9 @@ const ProductList = () => {
         const data = await res.json();
         if (data.success) setJerseys(data.data);
         else throw new Error('La API no devolvió datos exitosos');
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err: unknown) {
+        const error = err instanceof Error ? err : new Error('An unknown error occurred');
+        setError(error.message);
       } finally {
         setLoading(false);
       }

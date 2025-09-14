@@ -15,7 +15,7 @@ export default async function handler(
       try {
         const products = await Product.find({});
         res.status(200).json({ success: true, data: products });
-      } catch (error) {
+      } catch {
         res.status(400).json({ success: false });
       }
       break;

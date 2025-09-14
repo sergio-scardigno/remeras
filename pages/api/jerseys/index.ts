@@ -33,7 +33,7 @@ export default async function handler(
           if (imageFile) {
             imageUrl = `/yupoo_downloads/${dirName}/${imageFile}`;
           }
-        } catch (e) {
+        } catch {
           // El directorio podría estar vacío o inaccesible, continuamos
         }
 
