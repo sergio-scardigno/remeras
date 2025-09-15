@@ -9,9 +9,11 @@ Un catálogo interactivo de camisetas retro de fútbol, construido con Next.js, 
 ## 🚀 Características
 
 - 📱 Interfaz moderna y responsiva
-- 🔍 Navegación intuitiva por equipos y temporadas
+- 🔍 Navegación intuitiva por equipos, temporadas y jugadores
+- 🎲 Carga inicial aleatoria de camisetas (sin filtros)
 - 👥 Información detallada de jugadores con sus números
 - 🖼️ Galería de imágenes para cada camiseta
+- 📑 Paginación automática y carga infinita
 - ⚡ Rendimiento optimizado con Next.js
 
 ## 🛠️ Tecnologías
@@ -65,13 +67,20 @@ Un catálogo interactivo de camisetas retro de fútbol, construido con Next.js, 
 
 ```
 .
-├── app/                  # Rutas de la aplicación
-├── components/           # Componentes reutilizables
+├── app/                  # Rutas de la aplicación y componentes principales
+│   └── components/       # Componentes reutilizables (ProductList, Modal, etc.)
 ├── models/               # Modelos de MongoDB
-├── pages/                # API Routes
-├── public/               # Archivos estáticos
+├── pages/                # API Routes (incluye filtros, paginación y endpoints de imágenes)
+├── public/               # Archivos estáticos e imágenes
 └── types/                # Definiciones de tipos TypeScript
 ```
+## 🆕 Funcionalidades recientes
+
+- La carga inicial de camisetas es aleatoria si no hay filtros activos, mostrando variedad en cada visita.
+- Filtros avanzados por club, año y jugador, con búsqueda eficiente y sugerencias.
+- Paginación y carga infinita para explorar el catálogo sin recargar la página.
+- Modal de jugadores y galería de imágenes para cada camiseta.
+
 
 ## 🌐 Despliegue
 

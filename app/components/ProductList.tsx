@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Image from 'next/image';
 import Modal from './Modal';
 
@@ -19,33 +19,128 @@ interface Jersey {
   folderName: string;
 }
 
+
+
+const INITIAL_LOAD = 50;
+const LOAD_MORE = 30;
+
 const ProductList = () => {
   const [jerseys, setJerseys] = useState<Jersey[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+  const [hasMore, setHasMore] = useState(true);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const [total, setTotal] = useState<number | null>(null);
   const [playersModal, setPlayersModal] = useState<Jersey | null>(null);
   const [galleryModal, setGalleryModal] = useState<{jersey: Jersey, images: string[]} | null>(null);
   const [isGalleryLoading, setIsGalleryLoading] = useState(false);
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
 
+  // Estados para filtros
+  const [searchClub, setSearchClub] = useState('');
+  const [searchYear, setSearchYear] = useState('');
+  const [searchPlayer, setSearchPlayer] = useState('');
+  const [debouncedPlayer, setDebouncedPlayer] = useState('');
+  const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
+
+
+  // Clubs para el select (de la API)
+  const [clubs, setClubs] = useState<string[]>([]);
+  const years = Array.from(new Set(jerseys.map(j => j.year))).sort((a, b) => b - a);
+  // El listado de jugadores solo se arma con los jerseys cargados actualmente
+  // (eliminado: players no se usa)
+
+  // Traer todos los clubes únicos al montar
+  useEffect(() => {
+    const fetchClubs = async () => {
+      try {
+        const res = await fetch('/api/jerseys/clubs');
+        const data = await res.json();
+        if (data.success) setClubs(data.clubs);
+      } catch {
+        // Si falla, fallback a los clubes cargados
+        setClubs(Array.from(new Set(jerseys.map(j => j.club))).sort());
+      }
+    };
+    fetchClubs();
+    // eslint-disable-next-line
+  }, []);
+
+  // Debounce para el input de jugador
+  useEffect(() => {
+    if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
+    debounceTimeout.current = setTimeout(() => {
+      setDebouncedPlayer(searchPlayer);
+    }, 400);
+    return () => {
+      if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
+    };
+  }, [searchPlayer]);
+
+  // Fetch jerseys con filtros (usar debouncedPlayer)
   useEffect(() => {
     const fetchJerseys = async () => {
       try {
-        const res = await fetch('/api/jerseys');
+        setLoading(true);
+        // Construir query string con filtros
+        const params = new URLSearchParams();
+        params.append('skip', '0');
+        params.append('limit', INITIAL_LOAD.toString());
+        if (searchClub) params.append('club', searchClub);
+        if (searchYear) params.append('year', searchYear);
+        if (debouncedPlayer) params.append('player', debouncedPlayer);
+        const res = await fetch(`/api/jerseys?${params.toString()}`);
         if (!res.ok) throw new Error('Error al obtener la información de las camisetas');
         const data = await res.json();
-        if (data.success) setJerseys(data.data);
-        else throw new Error('La API no devolvió datos exitosos');
+        if (data.success) {
+          setJerseys(data.data);
+          setTotal(data.total);
+          setHasMore(data.data.length < data.total);
+        } else throw new Error('La API no devolvió datos exitosos');
       } catch (err: unknown) {
-        const error = err instanceof Error ? err : new Error('An unknown error occurred');
-        setError(error.message);
+        const errorMsg = err instanceof Error ? err.message : 'An unknown error occurred';
+        setError(errorMsg);
       } finally {
         setLoading(false);
       }
     };
     fetchJerseys();
-  }, []);
+    // eslint-disable-next-line
+  }, [searchClub, searchYear, debouncedPlayer]);
+
+  // Cargar más jerseys al hacer scroll
+  useEffect(() => {
+    const handleScroll = () => {
+      if (
+        window.innerHeight + window.scrollY >= document.body.offsetHeight - 300 &&
+        hasMore && !isFetchingMore && !loading
+      ) {
+        fetchMoreJerseys();
+      }
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+    // eslint-disable-next-line
+  }, [hasMore, isFetchingMore, loading, jerseys.length]);
+
+  const fetchMoreJerseys = async () => {
+    setIsFetchingMore(true);
+    try {
+      const res = await fetch(`/api/jerseys?skip=${jerseys.length}&limit=${LOAD_MORE}`);
+      if (!res.ok) throw new Error('Error al cargar más camisetas');
+      const data = await res.json();
+      if (data.success) {
+        setJerseys(prev => [...prev, ...data.data]);
+        setHasMore(jerseys.length + data.data.length < (data.total ?? 0));
+      }
+    } catch {
+      // Puedes mostrar un error si quieres
+    } finally {
+      setIsFetchingMore(false);
+    }
+  };
+
+  // (Eliminado: ya no se usa visibleCount ni setVisibleCount)
 
   const handleImageClick = async (jersey: Jersey) => {
     setIsGalleryLoading(true);
@@ -66,12 +161,60 @@ const ProductList = () => {
   if (loading) return <p className="text-center text-xl">Cargando catálogo...</p>;
   if (error) return <p className="text-center text-xl text-red-500">Error: {error}</p>;
 
+
+  // Ya no se filtra en frontend, jerseys ya viene filtrado
+  const filteredJerseys = jerseys;
+
+  // Si hay filtro de jugador, mostrar solo camisetas donde ese jugador jugó (ya lo hace el backend)
+  // Pero para UX, si el usuario escribe un nombre, mostrar sugerencias de jugadores
+
   return (
     <div className="w-full max-w-7xl mx-auto">
-      <h1 className="text-4xl font-bold mb-8 text-center">Catálogo de Camisetas Retro</h1>
+      <h1 className="text-4xl font-bold mb-8 text-center">Catálogo de Camisetas Retro el Fran</h1>
+
+      {/* Formulario de búsqueda */}
+      <div className="flex flex-col md:flex-row gap-4 mb-8 justify-center">
+        <div>
+          <label className="block text-sm font-medium mb-1">Equipo</label>
+          <select
+            className="border rounded px-2 py-1 w-full text-black bg-white"
+            value={searchClub}
+            onChange={e => setSearchClub(e.target.value)}
+          >
+            <option value="">Todos</option>
+            {clubs.map(club => (
+              <option key={club} value={club}>{club}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Año</label>
+          <select
+            className="border rounded px-2 py-1 w-full text-black bg-white"
+            value={searchYear}
+            onChange={e => setSearchYear(e.target.value)}
+          >
+            <option value="">Todos</option>
+            {years.map(year => (
+              <option key={year} value={year}>{year}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Jugador</label>
+          <input
+            type="text"
+            className="border rounded px-2 py-1 w-full text-black bg-white"
+            placeholder="Buscar jugador"
+            value={searchPlayer}
+            onChange={e => setSearchPlayer(e.target.value)}
+          />
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {jerseys.map((jersey) => (
-          <div key={jersey.folderName} className="border rounded-lg overflow-hidden shadow-lg hover:shadow-2xl transition-shadow duration-300 flex flex-col">
+        {filteredJerseys.map((jersey, idx) => (
+          <div key={`${jersey.folderName}-${idx}`} className="border rounded-lg overflow-hidden shadow-lg hover:shadow-2xl transition-shadow duration-300 flex flex-col">
             <div className="relative w-full h-64 cursor-pointer" onClick={() => handleImageClick(jersey)}>
               {jersey.imageUrl ? (
                 <Image src={jersey.imageUrl} alt={`Camiseta de ${jersey.club} ${jersey.year}`} layout="fill" objectFit="cover" />
@@ -91,6 +234,16 @@ const ProductList = () => {
           </div>
         ))}
       </div>
+      {isFetchingMore && (
+        <div className="flex justify-center mt-8">
+          <span className="text-gray-500">Cargando más camisetas...</span>
+        </div>
+      )}
+      {!hasMore && jerseys.length > 0 && (
+        <div className="flex justify-center mt-8">
+          <span className="text-gray-400">No hay más camisetas para mostrar.</span>
+        </div>
+      )}
 
       <Modal isOpen={playersModal !== null} onClose={() => setPlayersModal(null)} title={`Jugadores de ${playersModal?.club} ${playersModal?.year}`}>
         {playersModal && (
