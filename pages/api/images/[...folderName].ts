@@ -27,6 +27,12 @@ export default function handler(
 
     const imageUrls = files
       .filter(file => /\.(jpg|jpeg|png|gif|webp)$/i.test(file))
+      .sort((a, b) => {
+        // Sort image named '1' first, then sort the rest alphabetically
+        if (a.startsWith('1.')) return -1;
+        if (b.startsWith('1.')) return 1;
+        return a.localeCompare(b);
+      })
       .map(file => `/yupoo_downloads_webps/${encodeURIComponent(completeFolderName)}/${encodeURIComponent(file)}`);
 
     res.status(200).json({ success: true, data: imageUrls });
