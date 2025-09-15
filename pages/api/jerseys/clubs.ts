@@ -12,7 +12,7 @@ export default async function handler(
     await dbConnect();
     
     // First try to get clubs from MongoDB current_club field
-    let clubsFromDB = await Product.distinct('current_club');
+    const clubsFromDB = await Product.distinct('current_club');
     
     // Filter out any null/undefined and sort alphabetically
     let clubList = clubsFromDB

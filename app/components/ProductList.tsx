@@ -30,7 +30,8 @@ const ProductList = () => {
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
-  const [total, setTotal] = useState<number | null>(null);
+  // Total count is not used in the component
+  const [, setTotal] = useState<number | null>(null);
   const [playersModal, setPlayersModal] = useState<Jersey | null>(null);
   const [galleryModal, setGalleryModal] = useState<{jersey: Jersey, images: string[]} | null>(null);
   const [isGalleryLoading, setIsGalleryLoading] = useState(false);
@@ -48,7 +49,7 @@ const ProductList = () => {
   const [clubs, setClubs] = useState<string[]>([]);
   const years = Array.from(new Set(jerseys.map(j => j.year.toString()))).sort((a, b) => parseInt(b, 10) - parseInt(a, 10));
   // El listado de jugadores solo se arma con los jerseys cargados actualmente
-  // (eliminado: players no se usa)
+  // Players list is not used directly in the component
 
   // Traer todos los clubes únicos al montar
   useEffect(() => {
@@ -94,7 +95,7 @@ const ProductList = () => {
         const data = await res.json();
         
         // Transform the API response to match the expected format
-        const formattedJerseys = data.results.map((item: any) => ({
+        const formattedJerseys = data.results.map((item: { folderName: string; imageUrl: string }) => ({
           folderName: item.folderName,
           imageUrl: item.imageUrl,
           club: item.folderName.split('-').slice(2, -1).join(' '), // Extract club name from folder
@@ -147,7 +148,7 @@ const ProductList = () => {
       const data = await res.json();
       
       // Transform the API response to match the expected format
-      const newJerseys = data.results.map((item: any) => ({
+      const newJerseys = data.results.map((item: { folderName: string; imageUrl: string }) => ({
         folderName: item.folderName,
         imageUrl: item.imageUrl,
         club: item.folderName.split('-').slice(2, -1).join(' '),

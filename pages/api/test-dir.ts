@@ -19,7 +19,7 @@ export default function handler(
     const dirExists = directories.includes(testDir);
     const dirPath = path.join(yupooPath, testDir);
     
-    let dirContents = [];
+    let dirContents: string[] = [];
     if (dirExists) {
       dirContents = fs.readdirSync(dirPath);
     }
