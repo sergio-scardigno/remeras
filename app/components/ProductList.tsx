@@ -13,7 +13,7 @@ interface Player {
 
 interface Jersey {
   club: string;
-  year: number;
+  year: string; // Changed from number to string to match the actual usage
   imageUrl: string | null;
   players: Player[];
   folderName: string;
@@ -38,7 +38,7 @@ const ProductList = () => {
 
   // Estados para filtros
   const [searchClub, setSearchClub] = useState('');
-  const [searchYear, setSearchYear] = useState('');
+  const [searchYear, setSearchYear] = useState<string>('');
   const [searchPlayer, setSearchPlayer] = useState('');
   const [debouncedPlayer, setDebouncedPlayer] = useState('');
   const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
@@ -46,7 +46,7 @@ const ProductList = () => {
 
   // Clubs para el select (de la API)
   const [clubs, setClubs] = useState<string[]>([]);
-  const years = Array.from(new Set(jerseys.map(j => j.year))).sort((a, b) => b - a);
+  const years = Array.from(new Set(jerseys.map(j => j.year.toString()))).sort((a, b) => parseInt(b, 10) - parseInt(a, 10));
   // El listado de jugadores solo se arma con los jerseys cargados actualmente
   // (eliminado: players no se usa)
 
@@ -92,11 +92,19 @@ const ProductList = () => {
         const res = await fetch(`/api/jerseys?${params.toString()}`);
         if (!res.ok) throw new Error('Error al obtener la información de las camisetas');
         const data = await res.json();
-        if (data.success) {
-          setJerseys(data.data);
-          setTotal(data.total);
-          setHasMore(data.data.length < data.total);
-        } else throw new Error('La API no devolvió datos exitosos');
+        
+        // Transform the API response to match the expected format
+        const formattedJerseys = data.results.map((item: any) => ({
+          folderName: item.folderName,
+          imageUrl: item.imageUrl,
+          club: item.folderName.split('-').slice(2, -1).join(' '), // Extract club name from folder
+          year: item.folderName.split('-').pop() || '0', // Keep year as string for display
+          players: [] // Initialize empty players array
+        }));
+        
+        setJerseys(formattedJerseys);
+        setTotal(data.total);
+        setHasMore((data.page || 1) < (data.totalPages || 1));
       } catch (err: unknown) {
         const errorMsg = err instanceof Error ? err.message : 'An unknown error occurred';
         setError(errorMsg);
@@ -124,15 +132,31 @@ const ProductList = () => {
   }, [hasMore, isFetchingMore, loading, jerseys.length]);
 
   const fetchMoreJerseys = async () => {
+    if (isFetchingMore || !hasMore) return;
     setIsFetchingMore(true);
     try {
-      const res = await fetch(`/api/jerseys?skip=${jerseys.length}&limit=${LOAD_MORE}`);
+      const params = new URLSearchParams();
+      params.append('skip', jerseys.length.toString());
+      params.append('limit', LOAD_MORE.toString());
+      if (searchClub) params.append('club', searchClub);
+      if (searchYear) params.append('year', searchYear);
+      if (debouncedPlayer) params.append('player', debouncedPlayer);
+      
+      const res = await fetch(`/api/jerseys?${params.toString()}`);
       if (!res.ok) throw new Error('Error al cargar más camisetas');
       const data = await res.json();
-      if (data.success) {
-        setJerseys(prev => [...prev, ...data.data]);
-        setHasMore(jerseys.length + data.data.length < (data.total ?? 0));
-      }
+      
+      // Transform the API response to match the expected format
+      const newJerseys = data.results.map((item: any) => ({
+        folderName: item.folderName,
+        imageUrl: item.imageUrl,
+        club: item.folderName.split('-').slice(2, -1).join(' '),
+        year: item.folderName.split('-').pop() || '0', // Keep year as string
+        players: []
+      }));
+      
+      setJerseys(prev => [...prev, ...newJerseys]);
+      setHasMore((data.page || 1) < (data.totalPages || 1));
     } catch {
       // Puedes mostrar un error si quieres
     } finally {
